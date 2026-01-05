@@ -1,33 +1,25 @@
-import { connectMongo } from '../config/connection.js';
+import { supabase } from '../config/connection.js';
 import { hashPassword, verifyPassword } from '../utils/functions.js';
-import fs from 'fs';
 
 const insertUser = async (username, password) => {
-  const db = await connectMongo();
   const hashedPassword = await hashPassword(password);
-  await db
-    .collection('users')
-    .insertOne({ username: username, password: hashedPassword });
+  await supabase
+    .from('users')
+    .insert({ username: username, password: hashedPassword });
   return;
 };
 
 const checkUser = async (username, password) => {
-  const db = await connectMongo();
-  const users = await db
-    .collection('users')
-    .find({ username: username })
-    .toArray();
+  let checked = false;
+  const { data: users } = await supabase
+    .from('users')
+    .select()
+    .eq('username', username);
+  console.log(users);
   for (let user of users) {
-    const checked = await verifyPassword(password, user.password);
-    if (checked) {
-      fs.promises.writeFile(
-        './data/verifyUsers.json',
-        JSON.stringify({ username: user.username, status: true })
-      );
-      return checked;
-    }
+    checked = await verifyPassword(password, user.password);
   }
-  return false;
+  return checked;
 };
 
 export { insertUser, checkUser };
